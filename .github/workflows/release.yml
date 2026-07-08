@@ -1,0 +1,163 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+# Extract version from Cargo.toml (used in artifact naming)
+env:
+  CRATE_NAME: path-parser
+
+jobs:
+  # ── Build ──────────────────────────────────────────────────────────
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS arm64 (Apple Silicon) — build natively on M1 runner
+          - target: aarch64-apple-darwin
+            os: macos-14
+            cross: false
+            archive: tar.gz
+
+          # macOS x64 (Intel) — cross-compile from the M1 runner
+          - target: x86_64-apple-darwin
+            os: macos-14
+            cross: false
+            archive: tar.gz
+
+          # Linux x64 (glibc)
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+            archive: tar.gz
+
+          # Linux arm64
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+            archive: tar.gz
+
+          # Windows x64 (GNU)
+          - target: x86_64-pc-windows-gnu
+            os: ubuntu-latest
+            cross: true
+            archive: zip
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Read version from Cargo.toml (works on all runners with bash)
+      - name: Get version
+        id: version
+        shell: bash
+        run: |
+          ver=$(grep '^version' Cargo.toml | head -1 | sed 's/.*= *"\(.*\)".*/\1/')
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
+
+      # ── Native Rust toolchain (macOS runners) ────────────────────
+      - name: Install Rust toolchain
+        if: ${{ !matrix.cross }}
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      # ── cross (Linux / Windows cross-compile) ────────────────────
+      - name: Install Rust toolchain (for cross)
+        if: ${{ matrix.cross }}
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross
+        if: ${{ matrix.cross }}
+        run: cargo install cross --locked --version 0.2.5
+
+      # ── Build ────────────────────────────────────────────────────
+      - name: Build (native)
+        if: ${{ !matrix.cross }}
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Build (cross)
+        if: ${{ matrix.cross }}
+        run: cross build --release --target ${{ matrix.target }}
+
+      # ── Package ──────────────────────────────────────────────────
+      - name: Package archive (.tar.gz)
+        if: ${{ matrix.archive == 'tar.gz' }}
+        shell: bash
+        run: |
+          pkg="${{ env.CRATE_NAME }}-v${{ steps.version.outputs.version }}-${{ matrix.target }}"
+          mkdir -p "dist/$pkg"
+          cp "target/${{ matrix.target }}/release/${{ env.CRATE_NAME }}" "dist/$pkg/"
+          cp README.md LICENSE "dist/$pkg/" 2>/dev/null || true
+          tar -C dist -czf "dist/$pkg.tar.gz" "$pkg"
+          echo "asset=dist/$pkg.tar.gz" >> "$GITHUB_ENV"
+
+      - name: Package archive (.zip)
+        if: ${{ matrix.archive == 'zip' }}
+        shell: bash
+        run: |
+          pkg="${{ env.CRATE_NAME }}-v${{ steps.version.outputs.version }}-${{ matrix.target }}"
+          mkdir -p "dist/$pkg"
+          cp "target/${{ matrix.target }}/release/${{ env.CRATE_NAME }}.exe" "dist/$pkg/"
+          cp README.md LICENSE "dist/$pkg/" 2>/dev/null || true
+          (cd dist && zip -r "$pkg.zip" "$pkg")
+          echo "asset=dist/$pkg.zip" >> "$GITHUB_ENV"
+
+      # ── Upload artifact (used by the release job) ────────────────
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.CRATE_NAME }}-${{ matrix.target }}
+          path: ${{ env.asset }}
+          if-no-files-found: error
+
+  # ── Release ────────────────────────────────────────────────────────
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: ${{ env.CRATE_NAME }}-*
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -lh dist/
+
+      # ── Tag push → proper named release ──────────────────────────
+      - name: Create release (tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+
+      # ── Master push → update "latest" pre-release ────────────────
+      - name: Create / update "latest" pre-release
+        if: github.ref == 'refs/heads/master'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest (master)
+          files: dist/*
+          prerelease: true
+          body: |
+            Auto-built from the latest `master` push.
+
+            > **Note:** This is a development pre-release. For a stable version, use a tagged release instead.
+          fail_on_unmatched_files: true

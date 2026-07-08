@@ -35,6 +35,7 @@ fn main() -> io::Result<()> {
     if args.len() > 1 {
         match args[1].as_str() {
             "upgrade" => return cmd_upgrade(&args[2..]),
+            "uninstall" => return cmd_uninstall(&args[2..]),
             "--version" | "-V" | "version" => {
                 println!("path-parser v{}", VERSION);
                 return Ok(());
@@ -78,6 +79,38 @@ fn cmd_upgrade(extra_args: &[String]) -> io::Result<()> {
     Ok(())
 }
 
+/// Remove the installed binary.
+fn cmd_uninstall(args: &[String]) -> io::Result<()> {
+    let exe = std::env::current_exe()?;
+    let path = exe.to_string_lossy();
+
+    // Confirm unless --yes / -y is passed.
+    if !args.iter().any(|a| a == "--yes" || a == "-y") {
+        use std::io::Write;
+        print!("Remove {}? [y/N] ", path);
+        io::stdout().flush()?;
+        let mut input = String::new();
+        io::stdin().read_line(&mut input)?;
+        let answer = input.trim().to_lowercase();
+        if answer != "y" && answer != "yes" {
+            println!("Aborted.");
+            return Ok(());
+        }
+    }
+
+    match std::fs::remove_file(&exe) {
+        Ok(()) => {
+            println!("Removed {}.", path);
+            println!("Bye! 👋");
+            Ok(())
+        }
+        Err(e) => {
+            eprintln!("path-parser: failed to remove {}: {}", path, e);
+            std::process::exit(1);
+        }
+    }
+}
+
 fn print_help() {
     println!(
         "\
@@ -87,6 +120,7 @@ USAGE:
     path-parser              Launch the TUI
     path-parser upgrade      Upgrade to the latest release
     path-parser upgrade --pre   Upgrade to the latest master pre-release
+    path-parser uninstall    Remove this binary
     path-parser --version    Print version and exit
     path-parser --help       Show this help
 

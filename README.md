@@ -74,6 +74,13 @@ path-parser upgrade          # latest stable release
 path-parser upgrade --pre    # latest master pre-release
 ```
 
+### Uninstall
+
+```bash
+path-parser uninstall        # confirms before removing
+path-parser uninstall --yes  # skip confirmation
+```
+
 ### From source
 
 ```bash

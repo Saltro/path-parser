@@ -10,14 +10,14 @@ use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Widget};
 use ratatui::Frame;
 
 const COLOR_HEADER: Color = Color::Cyan;
-const COLOR_PATH: Color = Color::Reset;
-const COLOR_CHILD: Color = Color::Gray;
+const COLOR_PATH: Color = Color::White;
+const COLOR_CHILD: Color = Color::White;
 const COLOR_OVERWRITTEN: Color = Color::Yellow;
 const COLOR_DUPLICATE: Color = Color::Red;
 const COLOR_HIGHLIGHT: Color = Color::LightBlue;
-const COLOR_STATUS: Color = Color::DarkGray;
-const COLOR_MARKER: Color = Color::Magenta;
-const COLOR_NUMBER: Color = Color::Blue;
+const COLOR_STATUS: Color = Color::Gray;
+const COLOR_MARKER: Color = Color::LightMagenta;
+const COLOR_NUMBER: Color = Color::LightBlue;
 const COLOR_MODAL_BG: Color = Color::Black;
 
 /// Width of the left-side number column (e.g. " 1 ").
@@ -286,7 +286,7 @@ fn render_entry(app: &App, i: usize) -> ListItem<'static> {
             .fg(COLOR_DUPLICATE)
             .add_modifier(Modifier::BOLD)
     } else if !e.exists {
-        Style::default().fg(Color::Red).add_modifier(Modifier::DIM)
+        Style::default().fg(Color::Red)
     } else {
         Style::default().fg(COLOR_PATH)
     };

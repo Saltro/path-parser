@@ -1,0 +1,21 @@
+src/ui.rs
+  s_b0e4d03908fdc5::t_6b9393e42c8641 13-14,18-20,289
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "75ea1600758f5eac6f9abbf95c539b490f9478b9",
+  "prompts": {},
+  "sessions": {
+    "s_b0e4d03908fdc5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d333e6a1-9f4e-44e7-b8bc-d4fb318572b7",
+        "model": "unknown"
+      },
+      "human_author": "Saltro <2373117747@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

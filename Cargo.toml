@@ -1,6 +1,6 @@
 [package]
 name = "path-parser"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "A TUI tool to visualize and inspect your PATH environment variable"
 license = "MIT"

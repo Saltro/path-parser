@@ -45,6 +45,35 @@ A tiny Rust tool that visualizes your `$PATH` in an interactive **tree TUI**, so
 
 ## Install
 
+### One-liner (recommended)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Saltro/path-parser/master/install.sh | bash
+```
+
+This downloads the latest release for your platform and installs it to `~/.local/bin/path-parser`.
+
+Options:
+
+```bash
+# Install the latest master pre-release instead of a stable version
+curl -fsSL https://raw.githubusercontent.com/Saltro/path-parser/master/install.sh | bash -s -- --pre
+
+# Install a specific version
+curl -fsSL https://raw.githubusercontent.com/Saltro/path-parser/master/install.sh | bash -s -- --version v0.1.0
+```
+
+> **Windows:** The install script requires bash. Use WSL or download the `.zip` asset from [Releases](https://github.com/Saltro/path-parser/releases) directly.
+
+### Upgrade
+
+Once installed, update to the latest version with:
+
+```bash
+path-parser upgrade          # latest stable release
+path-parser upgrade --pre    # latest master pre-release
+```
+
 ### From source
 
 ```bash

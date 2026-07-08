@@ -5,6 +5,7 @@ mod path;
 mod ui;
 
 use std::io::{self, Stdout};
+use std::process::Command;
 use std::time::Duration;
 
 use crossterm::event::{self, Event, KeyEventKind, MouseEvent};
@@ -23,7 +24,93 @@ use ratatui::Terminal;
 use app::App;
 use ui::LayoutInfo;
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+const INSTALL_URL: &str =
+    "https://raw.githubusercontent.com/Saltro/path-parser/master/install.sh";
+
 fn main() -> io::Result<()> {
+    let args: Vec<String> = std::env::args().collect();
+
+    // ── CLI subcommands (run before entering the TUI) ──────────────
+    if args.len() > 1 {
+        match args[1].as_str() {
+            "upgrade" => return cmd_upgrade(&args[2..]),
+            "--version" | "-V" | "version" => {
+                println!("path-parser v{}", VERSION);
+                return Ok(());
+            }
+            "--help" | "-h" | "help" => {
+                print_help();
+                return Ok(());
+            }
+            other => {
+                eprintln!("path-parser: unknown subcommand '{}'", other);
+                eprintln!("Run 'path-parser --help' for usage.");
+                std::process::exit(1);
+            }
+        }
+    }
+
+    run_tui()
+}
+
+/// Download and run the install script to self-upgrade.
+fn cmd_upgrade(extra_args: &[String]) -> io::Result<()> {
+    println!("Upgrading path-parser...");
+    println!();
+
+    // Build the bash command: curl the install script and pipe to bash,
+    // forwarding any extra args (e.g. --pre).
+    let mut bash_cmd = format!("curl -fsSL {} | bash -s --", INSTALL_URL);
+    for arg in extra_args {
+        bash_cmd.push(' ');
+        bash_cmd.push_str(arg);
+    }
+
+    let status = Command::new("bash")
+        .arg("-c")
+        .arg(&bash_cmd)
+        .status()?;
+
+    if !status.success() {
+        std::process::exit(status.code().unwrap_or(1));
+    }
+    Ok(())
+}
+
+fn print_help() {
+    println!(
+        "\
+path-parser v{version} — visualize $PATH in an interactive tree TUI.
+
+USAGE:
+    path-parser              Launch the TUI
+    path-parser upgrade      Upgrade to the latest release
+    path-parser upgrade --pre   Upgrade to the latest master pre-release
+    path-parser --version    Print version and exit
+    path-parser --help       Show this help
+
+INSTALL (one-liner):
+    curl -fsSL {url} | bash
+
+KEYS (in the TUI):
+    ↑/k  ↓/j        Move up / down
+    g  G            Jump to top / bottom
+    PgUp  PgDn      Page up / down
+    Ctrl-U  Ctrl-D  Half-page up / down
+    Enter / →       Toggle expand / collapse
+    ← / Esc         Collapse
+    *  -            Expand all / collapse all
+    /               Search (type substring, Enter to confirm)
+    n  N            Next / previous search match
+    o               Open filter picker
+    c               Copy path under cursor to clipboard
+    q  Ctrl-C       Quit",
+        version = VERSION,
+        url = INSTALL_URL
+    );
+}
+fn run_tui() -> io::Result<()> {
     let path_var = std::env::var("PATH").unwrap_or_default();
     let mut app = App::new(&path_var);
 

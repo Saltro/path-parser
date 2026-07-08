@@ -1,0 +1,27 @@
+src/app.rs
+  s_b0e4d03908fdc5::t_fc9403d4bc4aec 4,116,128,139
+src/main.rs
+  s_b0e4d03908fdc5::t_93099ff10b322f 5
+src/theme.rs
+  s_b0e4d03908fdc5::t_8939456833ac7d 1-175
+src/ui.rs
+  s_b0e4d03908fdc5::t_aa126ae22923a2 38,49,94,105,132,138,143,145,148,157,160,162,174,188,204,207,210-212,219,224,237,242,256,262,266,268,270,272,278,281,283,289,299,306,313,323-324,329,331,334,339,342,345,348,352,360,364,370,377,391,394
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "53e45d15a9b92a76f06db26722ef876dd2ebe974",
+  "prompts": {},
+  "sessions": {
+    "s_b0e4d03908fdc5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d333e6a1-9f4e-44e7-b8bc-d4fb318572b7",
+        "model": "unknown"
+      },
+      "human_author": "Saltro <2373117747@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

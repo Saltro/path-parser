@@ -1,0 +1,33 @@
+README.md
+  s_b0e4d03908fdc5::t_3638fc0fade34f 48-76
+install.sh
+  s_9b15700bae1bd5::t_1f89a2ed40a585 1-193
+src/main.rs
+  s_b0e4d03908fdc5::t_67642a1ce9cc80 8,27-30,32-113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "9b6262c81c1327a4352ce46f93310cf751666791",
+  "prompts": {},
+  "sessions": {
+    "s_9b15700bae1bd5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "79c56c55-c70e-4d55-8b30-5929905b08a2",
+        "model": "unknown"
+      },
+      "human_author": "Saltro <2373117747@qq.com>"
+    },
+    "s_b0e4d03908fdc5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d333e6a1-9f4e-44e7-b8bc-d4fb318572b7",
+        "model": "unknown"
+      },
+      "human_author": "Saltro <2373117747@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

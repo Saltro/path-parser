@@ -13,7 +13,6 @@ set -euo pipefail
 REPO="Saltro/path-parser"
 INSTALL_DIR="${HOME}/.local/bin"
 BINARY="path-parser"
-INSTALL_URL="https://raw.githubusercontent.com/${REPO}/master/install.sh"
 
 # ── Argument parsing ─────────────────────────────────────────────────
 USE_PRE=false
@@ -66,38 +65,81 @@ detect_target() {
     echo "${arch}-${os}"
 }
 
-# ── Fetch release info ───────────────────────────────────────────────
-# Returns the full JSON for a single release.
-fetch_release() {
-    local tag="$1"
-    if [[ -n "$tag" ]]; then
-        # Specific tag (includes "latest" as a tag name).
-        curl -fsSL "https://api.github.com/repos/${REPO}/releases/tags/${tag}"
+# ── Resolve the release tag and version ──────────────────────────────
+#
+# Strategy (avoids the GitHub REST API rate limit for the common case):
+#
+#   1. Stable (default):  follow /releases/latest redirect → tag "v0.1.0"
+#                         version is derived from the tag: strip leading "v"
+#
+#   2. --pre ("latest"):  fetch Cargo.toml from raw.githubusercontent.com
+#                         to learn the current version, then download
+#                         directly from the "latest" tag.
+#
+#   3. --version TAG:     if TAG starts with "v", version = TAG[1:];
+#                         otherwise treat like --pre but for that tag.
+#
+# Sets global vars: RELEASE_TAG, RELEASE_VERSION
+resolve_release() {
+    if [[ -n "$VERSION_TAG" ]]; then
+        RELEASE_TAG="$VERSION_TAG"
+    elif $USE_PRE; then
+        RELEASE_TAG="latest"
     else
-        # Latest non-prerelease release.
-        curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest"
+        RELEASE_TAG=""
     fi
+
+    # ── Case 1: we need to discover the latest stable tag ────────
+    if [[ -z "$RELEASE_TAG" ]]; then
+        info "Resolving latest stable release..."
+        local redirect
+        redirect=$(curl -sI -o /dev/null -w '%{redirect_url}' \
+            "https://github.com/${REPO}/releases/latest")
+        if [[ -z "$redirect" || "$redirect" == "null" ]]; then
+            # No stable release yet — fall back to pre-release.
+            warn "No stable release found. Falling back to 'latest' pre-release..."
+            RELEASE_TAG="latest"
+        else
+            RELEASE_TAG=$(basename "$redirect")
+        fi
+    fi
+
+    # ── Case 2: tag is a version (starts with "v") ───────────────
+    if [[ "$RELEASE_TAG" == v* ]]; then
+        RELEASE_VERSION="${RELEASE_TAG#v}"
+        return 0
+    fi
+
+    # ── Case 3: non-version tag ("latest" or custom) ─────────────
+    # Read version from Cargo.toml on the default branch.
+    info "Reading version from Cargo.toml (tag: ${RELEASE_TAG})..."
+    local cargo_toml
+    cargo_toml=$(curl -fsSL \
+        "https://raw.githubusercontent.com/${REPO}/master/Cargo.toml" 2>/dev/null) \
+        || error "Could not fetch Cargo.toml. Is the repo public?"
+    RELEASE_VERSION=$(echo "$cargo_toml" | grep '^version' | head -1 \
+        | sed 's/.*= *"\(.*\)".*/\1/')
+    [[ -n "$RELEASE_VERSION" ]] || error "Could not parse version from Cargo.toml"
 }
 
-# ── Pick the right asset from a release JSON ─────────────────────────
-find_asset_url() {
-    local json="$1" target="$2"
-    # Asset names look like: path-parser-v0.1.0-aarch64-apple-darwin.tar.gz
-    local name
-    name=$(echo "$json" | grep -oE "\"name\": *\"${BINARY}-v[^\"]+-${target}\\.tar\\.gz\"" | head -1 | sed -E 's/.*"name": *"([^"]+)".*/\1/')
-    if [[ -z "$name" ]]; then
-        return 1
-    fi
-    local url
-    url=$(echo "$json" | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-for a in data.get('assets', []):
-    if a['name'] == '$name':
-        print(a['browser_download_url'])
-        break
-" 2>/dev/null || echo "$json" | grep -oE "\"browser_download_url\": *\"[^\"]+${name}\"" | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
-    echo "$url"
+# ── Build the direct download URL ────────────────────────────────────
+#
+# GitHub serves release assets at:
+#   https://github.com/{owner}/{repo}/releases/download/{tag}/{filename}
+#
+# Our CI names assets: path-parser-v{version}-{target}.tar.gz
+build_download_url() {
+    local tag="$1" version="$2" target="$3"
+    local filename="${BINARY}-v${version}-${target}.tar.gz"
+    echo "https://github.com/${REPO}/releases/download/${tag}/${filename}"
+}
+
+# ── Verify the URL exists (avoid downloading a 404 HTML page) ────────
+check_url() {
+    local url="$1"
+    local http_code
+    http_code=$(curl -sI -o /dev/null -w '%{http_code}' -L "$url")
+    [[ "$http_code" == "200" ]]
 }
 
 # ── Main ─────────────────────────────────────────────────────────────
@@ -109,64 +151,47 @@ main() {
     target=$(detect_target)
     info "Detected platform: ${target}"
 
-    # Decide which release tag to use.
-    local tag=""
-    if [[ -n "$VERSION_TAG" ]]; then
-        tag="$VERSION_TAG"
-    elif $USE_PRE; then
-        tag="latest"
+    # Resolve which release to install.
+    resolve_release
+    local display_name="${RELEASE_TAG}"
+    [[ "$RELEASE_TAG" == "latest" ]] && display_name="latest (pre-release)"
+    info "Release: ${display_name}  (version ${RELEASE_VERSION})"
+
+    # Build download URL and verify the asset exists.
+    local url
+    url=$(build_download_url "$RELEASE_TAG" "$RELEASE_VERSION" "$target")
+    local filename
+    filename=$(basename "$url")
+
+    if ! check_url "$url"; then
+        error "No asset found: ${filename}"$'\n'"$'\n'Check available releases at: https://github.com/${REPO}/releases"
     fi
-
-    info "Fetching release info..."
-    local release_json
-    if ! release_json=$(fetch_release "$tag" 2>/dev/null); then
-        if [[ -z "$tag" ]]; then
-            # No stable release yet — fall back to the "latest" pre-release.
-            warn "No stable release found, trying the 'latest' pre-release..."
-            tag="latest"
-            release_json=$(fetch_release "$tag") || error "Could not fetch release info. Is the repo public?"
-        else
-            error "Could not fetch release info for tag '${tag}'."
-        fi
-    fi
-
-    # Extract tag name (e.g. "v0.1.0" or "latest").
-    local release_tag
-    release_tag=$(echo "$release_json" | grep -oE '"tag_name": *"[^"]+"' | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
-    info "Release: ${release_tag}"
-
-    # Find matching asset.
-    local asset_url
-    asset_url=$(find_asset_url "$release_json" "$target") || \
-        error "No asset found for target '${target}' in release ${release_tag}. Available assets:"$'\n'"$(echo "$release_json" | grep -oE '"name": *"[^"]+\.(tar\.gz|zip)"' | sed -E 's/.*"([^"]+)".*/  - \1/')"
 
     # Download.
-    local tmp_dir
-    tmp_dir=$(mktemp -d)
-    trap 'rm -rf "${tmp_dir}"' EXIT
+    TMP_DIR=$(mktemp -d)
+    trap 'rm -rf "${TMP_DIR}"' EXIT
 
-    local archive="${tmp_dir}/archive.tar.gz"
-    info "Downloading $(basename "${asset_url}")..."
-    curl -fSL --progress-bar -o "${archive}" "${asset_url}"
+    local archive="${TMP_DIR}/archive.tar.gz"
+    info "Downloading ${filename}..."
+    curl -fSL --progress-bar -o "${archive}" "$url"
 
     # Extract.
     info "Extracting..."
-    tar -xzf "${archive}" -C "${tmp_dir}"
+    tar -xzf "${archive}" -C "${TMP_DIR}"
 
     # Find the extracted binary.
     local bin_src
-    bin_src=$(find "${tmp_dir}" -type f -name "${BINARY}" -not -path "*/target/*" | head -1)
+    bin_src=$(find "${TMP_DIR}" -type f -name "${BINARY}" | head -1)
     [[ -n "$bin_src" ]] || error "Could not find ${BINARY} in the archive."
 
     # Install.
     mkdir -p "${INSTALL_DIR}"
     local dest="${INSTALL_DIR}/${BINARY}"
 
-    # If we're upgrading a running binary (unlikely here, but safe).
     if [[ -f "$dest" ]]; then
         local old_ver
         old_ver=$("$dest" --version 2>/dev/null || echo "unknown")
-        info "Upgrading ${old_ver} → ${release_tag}"
+        info "Upgrading ${old_ver} → v${RELEASE_VERSION}"
     else
         info "Installing to ${dest}"
     fi

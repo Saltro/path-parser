@@ -1,6 +1,7 @@
 //! Application state and event handling.
 
 use crate::path::{display_path, parse, PathEntry};
+use crate::theme::Colors;
 use crossterm::event::{
     KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
 };
@@ -112,6 +113,7 @@ pub struct App {
     pub search: Search,
     pub modal: Modal,
     pub quit: bool,
+    pub colors: Colors,
 }
 
 impl App {
@@ -123,6 +125,7 @@ impl App {
         } else {
             String::new()
         };
+        let colors = Colors::for_theme(crate::theme::detect_theme());
         Self {
             entries,
             expanded,
@@ -133,6 +136,7 @@ impl App {
             search: Search::default(),
             modal: Modal::None,
             quit: false,
+            colors,
         }
     }
 

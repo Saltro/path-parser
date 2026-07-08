@@ -2,6 +2,7 @@
 
 mod app;
 mod path;
+mod theme;
 mod ui;
 
 use std::io::{self, Stdout};

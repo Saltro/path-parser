@@ -9,17 +9,6 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Widget};
 use ratatui::Frame;
 
-const COLOR_HEADER: Color = Color::Cyan;
-const COLOR_PATH: Color = Color::White;
-const COLOR_CHILD: Color = Color::White;
-const COLOR_OVERWRITTEN: Color = Color::Yellow;
-const COLOR_DUPLICATE: Color = Color::Red;
-const COLOR_HIGHLIGHT: Color = Color::LightBlue;
-const COLOR_STATUS: Color = Color::Gray;
-const COLOR_MARKER: Color = Color::LightMagenta;
-const COLOR_NUMBER: Color = Color::LightBlue;
-const COLOR_MODAL_BG: Color = Color::Black;
-
 /// Width of the left-side number column (e.g. " 1 ").
 const NUMBER_COL_WIDTH: u16 = 4;
 
@@ -46,7 +35,7 @@ pub fn draw(f: &mut Frame, app: &mut App) -> LayoutInfo {
         Span::styled(
             "PATH",
             Style::default()
-                .fg(COLOR_HEADER)
+                .fg(app.colors.header)
                 .add_modifier(Modifier::BOLD),
         ),
         Span::raw("  "),
@@ -57,7 +46,7 @@ pub fn draw(f: &mut Frame, app: &mut App) -> LayoutInfo {
                 total_overwritten,
                 total_duplicates
             ),
-            Style::default().fg(COLOR_STATUS),
+            Style::default().fg(app.colors.status),
         ),
     ]);
     SingleLine(header_line).render(header, f.buffer_mut());
@@ -102,7 +91,7 @@ pub fn draw(f: &mut Frame, app: &mut App) -> LayoutInfo {
     // row for visual continuity).
     let num_list = List::new(visible_nums).highlight_style(
         Style::default()
-            .fg(COLOR_HIGHLIGHT)
+            .fg(app.colors.highlight)
             .add_modifier(Modifier::BOLD),
     );
     let mut num_state = ListState::default();
@@ -113,7 +102,7 @@ pub fn draw(f: &mut Frame, app: &mut App) -> LayoutInfo {
     let list = List::new(visible_content)
         .highlight_style(
             Style::default()
-                .fg(COLOR_HIGHLIGHT)
+                .fg(app.colors.highlight)
                 .add_modifier(Modifier::BOLD),
         )
         .highlight_symbol(">> ");
@@ -140,22 +129,23 @@ pub fn draw(f: &mut Frame, app: &mut App) -> LayoutInfo {
 // ----------------------------------------------------------------------
 
 fn render_bottom(area: Rect, buf: &mut Buffer, app: &App) {
+    let c = app.colors;
     if app.search.editing {
         let line = Line::from(vec![
             Span::styled(
                 "/",
                 Style::default()
-                    .fg(Color::White)
+                    .fg(c.search_text)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(
                 app.search.query.clone(),
-                Style::default().fg(Color::White),
+                Style::default().fg(c.search_text),
             ),
-            Span::styled("█", Style::default().fg(Color::White)), // cursor
+            Span::styled("█", Style::default().fg(c.search_text)), // cursor
             Span::styled(
                 "  [Enter confirm, Esc cancel]",
-                Style::default().fg(COLOR_STATUS),
+                Style::default().fg(c.status),
             ),
         ]);
         SingleLine(line).render(area, buf);
@@ -164,12 +154,12 @@ fn render_bottom(area: Rect, buf: &mut Buffer, app: &App) {
 
     let help = "↑/k ↓/j  g top  G end  PgUp/PgDn  C-u/C-d  / search  n/N next  ↵/→ toggle  ← collapse  * all  - none  o filters  c copy  q quit";
     let line = if app.status.is_empty() {
-        Line::from(Span::styled(help, Style::default().fg(COLOR_STATUS)))
+        Line::from(Span::styled(help, Style::default().fg(c.status)))
     } else {
         Line::from(vec![
-            Span::styled(help, Style::default().fg(COLOR_STATUS)),
+            Span::styled(help, Style::default().fg(c.status)),
             Span::raw("    "),
-            Span::styled(app.status.clone(), Style::default().fg(Color::White)),
+            Span::styled(app.status.clone(), Style::default().fg(c.search_text)),
         ])
     };
     SingleLine(line).render(area, buf);
@@ -181,6 +171,7 @@ fn render_bottom(area: Rect, buf: &mut Buffer, app: &App) {
 
 fn render_filter_modal(f: &mut Frame, app: &App, selected: usize) {
     let area = f.area();
+    let c = app.colors;
 
     // Modal dimensions.
     let width = 46u16.min(area.width.saturating_sub(4));
@@ -194,7 +185,7 @@ fn render_filter_modal(f: &mut Frame, app: &App, selected: usize) {
     let block = Block::default()
         .borders(Borders::ALL)
         .title(" Filters ")
-        .style(Style::default().bg(COLOR_MODAL_BG).fg(Color::White));
+        .style(Style::default().bg(c.modal_bg).fg(c.modal_text));
     let inner = block.inner(modal);
     f.render_widget(block, modal);
 
@@ -210,27 +201,27 @@ fn render_filter_modal(f: &mut Frame, app: &App, selected: usize) {
         let mark = if on { "✓" } else { " " };
         let style = if i == selected {
             Style::default()
-                .fg(COLOR_HIGHLIGHT)
+                .fg(c.highlight)
                 .add_modifier(Modifier::BOLD)
         } else {
-            Style::default().fg(Color::White)
+            Style::default().fg(c.modal_text)
         };
         let line = Line::from(vec![
-            Span::styled(" [", Style::default().fg(Color::White)),
-            Span::styled(mark.to_string(), Style::default().fg(Color::Green)),
-            Span::styled("] ", Style::default().fg(Color::White)),
+            Span::styled(" [", Style::default().fg(c.modal_text)),
+            Span::styled(mark.to_string(), Style::default().fg(c.checkmark)),
+            Span::styled("] ", Style::default().fg(c.modal_text)),
             Span::styled((*label).to_string(), style),
         ]);
         items.push(ListItem::new(line));
     }
     items.push(ListItem::new(Line::from(Span::styled(
         "  ↑/k ↓/j move   Space/Enter toggle   Esc close",
-        Style::default().fg(COLOR_STATUS),
+        Style::default().fg(c.status),
     ))));
 
     let list = List::new(items).highlight_style(
         Style::default()
-            .fg(COLOR_HIGHLIGHT)
+            .fg(c.highlight)
             .add_modifier(Modifier::BOLD),
     );
     let mut state = ListState::default();
@@ -243,12 +234,12 @@ fn render_filter_modal(f: &mut Frame, app: &App, selected: usize) {
 // ----------------------------------------------------------------------
 
 /// Render the number-column cell for a row (blank for non-entry rows).
-fn render_number_row(_app: &App, row: Row) -> ListItem<'static> {
+fn render_number_row(app: &App, row: Row) -> ListItem<'static> {
     match row {
         Row::Entry { number, .. } => ListItem::new(Line::from(Span::styled(
             format!("{:>2} ", number),
             Style::default()
-                .fg(COLOR_NUMBER)
+                .fg(app.colors.number)
                 .add_modifier(Modifier::BOLD),
         ))),
         Row::Child { .. } | Row::Empty(_) => {
@@ -262,39 +253,40 @@ fn render_content_row(app: &App, row: Row) -> ListItem<'static> {
     match row {
         Row::Entry { index, .. } => render_entry(app, index),
         Row::Child { entry, child } => render_child(app, entry, child),
-        Row::Empty(i) => render_empty(i),
+        Row::Empty(i) => render_empty(app, i),
     }
 }
 
 fn render_entry(app: &App, i: usize) -> ListItem<'static> {
     let e = &app.entries[i];
+    let c = app.colors;
     let expanded = app.expanded.get(i).copied().unwrap_or(false);
 
     let marker = if e.duplicate_of.is_some() {
-        Span::styled("[=] ", Style::default().fg(COLOR_DUPLICATE))
+        Span::styled("[=] ", Style::default().fg(c.duplicate))
     } else if !e.exists {
-        Span::styled("[!] ", Style::default().fg(Color::Red))
+        Span::styled("[!] ", Style::default().fg(c.missing))
     } else if expanded {
-        Span::styled("▾ ", Style::default().fg(COLOR_MARKER))
+        Span::styled("▾ ", Style::default().fg(c.marker))
     } else {
-        Span::styled("▸ ", Style::default().fg(COLOR_MARKER))
+        Span::styled("▸ ", Style::default().fg(c.marker))
     };
 
     let path_str = display_path(&e.resolved);
     let path_style = if e.duplicate_of.is_some() {
         Style::default()
-            .fg(COLOR_DUPLICATE)
+            .fg(c.duplicate)
             .add_modifier(Modifier::BOLD)
     } else if !e.exists {
-        Style::default().fg(Color::Red)
+        Style::default().fg(c.missing)
     } else {
-        Style::default().fg(COLOR_PATH)
+        Style::default().fg(c.path)
     };
     let path_span = maybe_highlight_search(
         &path_str,
         &app.search.committed,
         path_style,
-        true,
+        c.search_hl_bg,
     );
 
     let mut spans = vec![marker];
@@ -304,21 +296,21 @@ fn render_entry(app: &App, i: usize) -> ListItem<'static> {
         spans.push(Span::styled(
             format!("  (duplicate of #{})", orig + 1),
             Style::default()
-                .fg(COLOR_DUPLICATE)
+                .fg(c.duplicate)
                 .add_modifier(Modifier::ITALIC),
         ));
     } else if !e.exists {
         spans.push(Span::styled(
             "  (missing)".to_string(),
             Style::default()
-                .fg(Color::Red)
+                .fg(c.missing)
                 .add_modifier(Modifier::ITALIC),
         ));
     } else if e.shadowed_count > 0 {
         spans.push(Span::styled(
             format!("  ({} overwritten)", e.shadowed_count),
             Style::default()
-                .fg(COLOR_OVERWRITTEN)
+                .fg(c.overwritten)
                 .add_modifier(Modifier::ITALIC),
         ));
     }
@@ -328,35 +320,36 @@ fn render_entry(app: &App, i: usize) -> ListItem<'static> {
 
 fn render_child(app: &App, entry: usize, child: usize) -> ListItem<'static> {
     let e = &app.entries[entry];
-    let c = &e.children[child];
+    let c = app.colors;
+    let cc = &e.children[child];
 
     let is_last = child + 1 == e.children.len();
     let branch = if is_last { "└─ " } else { "├─ " };
 
-    let base_name_style = if c.overwritten_by.is_some() {
+    let base_name_style = if cc.overwritten_by.is_some() {
         Style::default()
-            .fg(COLOR_OVERWRITTEN)
+            .fg(c.overwritten)
             .add_modifier(Modifier::CROSSED_OUT)
     } else {
-        Style::default().fg(COLOR_CHILD)
+        Style::default().fg(c.child)
     };
 
     let mut spans = vec![
         Span::raw("   "),
-        Span::styled(branch.to_string(), Style::default().fg(COLOR_STATUS)),
+        Span::styled(branch.to_string(), Style::default().fg(c.status)),
     ];
     spans.extend(maybe_highlight_search(
-        &c.name,
+        &cc.name,
         &app.search.committed,
         base_name_style,
-        true,
+        c.search_hl_bg,
     ));
 
-    if let Some(by) = &c.overwritten_by {
+    if let Some(by) = &cc.overwritten_by {
         spans.push(Span::styled(
             format!("  (overwritten by {})", display_path(by)),
             Style::default()
-                .fg(COLOR_OVERWRITTEN)
+                .fg(c.overwritten)
                 .add_modifier(Modifier::ITALIC),
         ));
     }
@@ -364,24 +357,24 @@ fn render_child(app: &App, entry: usize, child: usize) -> ListItem<'static> {
     ListItem::new(Line::from(spans))
 }
 
-fn render_empty(_entry: usize) -> ListItem<'static> {
+fn render_empty(app: &App, _entry: usize) -> ListItem<'static> {
     ListItem::new(Line::from(Span::styled(
         "   └─ (empty)",
         Style::default()
-            .fg(COLOR_STATUS)
+            .fg(app.colors.status)
             .add_modifier(Modifier::ITALIC),
     )))
 }
 
 /// If `query` is non-empty and appears in `text`, return a vec of spans
-/// that highlights each occurrence with a **yellow background + bold**
+/// that highlights each occurrence with a **background + bold**
 /// while preserving the original foreground color. Otherwise returns a
 /// single span styled with `base`.
 fn maybe_highlight_search(
     text: &str,
     query: &str,
     base: Style,
-    _whole: bool,
+    hl_bg: Color,
 ) -> Vec<Span<'static>> {
     if query.is_empty() {
         return vec![Span::styled(text.to_string(), base)];
@@ -395,10 +388,10 @@ fn maybe_highlight_search(
         return vec![Span::styled(text.to_string(), base)];
     }
 
-    // Highlight style: keep original foreground, add bold, yellow bg.
+    // Highlight style: keep original foreground, add bold, colored bg.
     let hl = base
         .add_modifier(Modifier::BOLD)
-        .bg(Color::Yellow);
+        .bg(hl_bg);
 
     let mut out: Vec<Span> = Vec::new();
     let mut cursor = 0;

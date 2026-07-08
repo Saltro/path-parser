@@ -1,0 +1,30 @@
+[package]
+name = "path-parser"
+version = "0.1.0"
+edition = "2021"
+description = "A TUI tool to visualize and inspect your PATH environment variable"
+license = "MIT"
+readme = "README.md"
+keywords = ["path", "tui", "terminal", "env", "cli"]
+categories = ["command-line-utilities", "development-tools"]
+
+[[bin]]
+name = "path-parser"
+path = "src/main.rs"
+
+[dependencies]
+# TUI framework
+ratatui = "0.28"
+# Cross-platform terminal event handling (mac / win / linux)
+crossterm = "0.28"
+# Cross-platform clipboard (mac / win / linux X11+Wayland)
+arboard = { version = "3.4", default-features = false }
+# Home-dir resolution for `~` expansion (cross-platform)
+dirs = "5"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"

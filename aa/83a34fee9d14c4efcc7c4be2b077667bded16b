@@ -1,0 +1,21 @@
+.github/workflows/release.yml
+  s_9b15700bae1bd5::t_38742975bb302e 1-163
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "aa83a34fee9d14c4efcc7c4be2b077667bded16b",
+  "prompts": {},
+  "sessions": {
+    "s_9b15700bae1bd5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "79c56c55-c70e-4d55-8b30-5929905b08a2",
+        "model": "unknown"
+      },
+      "human_author": "Saltro <2373117747@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

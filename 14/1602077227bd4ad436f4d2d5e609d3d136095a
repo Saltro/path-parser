@@ -1,0 +1,23 @@
+README.md
+  s_b0e4d03908fdc5::t_98d7d69b720ca2 77-83
+src/main.rs
+  s_b0e4d03908fdc5::t_6fb50f48582b93 38,82-113,123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "141602077227bd4ad436f4d2d5e609d3d136095a",
+  "prompts": {},
+  "sessions": {
+    "s_b0e4d03908fdc5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d333e6a1-9f4e-44e7-b8bc-d4fb318572b7",
+        "model": "unknown"
+      },
+      "human_author": "Saltro <2373117747@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

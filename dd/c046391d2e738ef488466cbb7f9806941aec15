@@ -1,0 +1,21 @@
+install.sh
+  s_b0e4d03908fdc5::t_6e488c7a541df9 68-87,89,92-104,106-142,154-158,160-164,166-168,171-172,174-176,180,184,194
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ddc046391d2e738ef488466cbb7f9806941aec15",
+  "prompts": {},
+  "sessions": {
+    "s_b0e4d03908fdc5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d333e6a1-9f4e-44e7-b8bc-d4fb318572b7",
+        "model": "unknown"
+      },
+      "human_author": "Saltro <2373117747@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
